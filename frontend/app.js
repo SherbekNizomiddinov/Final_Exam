@@ -67,7 +67,7 @@ document.getElementById('checkoutBtn').addEventListener('click', () => {
   switchCheckoutStep('address');
 });
 
-// Initial Load
+// Initial Load - Check if user is logged in
 if (authToken) {
   loadHome();
 } else {
@@ -80,7 +80,7 @@ function showNotification(message, type = 'success') {
   notificationEl.className = `notification show ${type}`;
   setTimeout(() => {
     notificationEl.classList.remove('show');
-  }, 3000);
+  }, 3500);
 }
 
 async function apiCall(url, options = {}) {
@@ -114,42 +114,12 @@ async function apiCall(url, options = {}) {
 
     return response;
   } catch (error) {
-    console.error('[v0] API call error:', error);
+    console.error('API call error:', error);
     return { ok: false, error };
   }
 }
 
 // Authentication Functions
-async function handleLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      loginPendingUserId = data.userId;
-      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
-      document.getElementById('twofa').classList.add('active');
-      document.getElementById('otpInput').focus();
-      showNotification('OTP sent to your email. Test OTP: ' + data.testOTP);
-    } else {
-      showNotification(data.message || 'Login failed', 'error');
-    }
-  } catch (error) {
-    console.error('[v0] Login error:', error);
-    showNotification('Login failed', 'error');
-  }
-}
-
 async function handleRegister(e) {
   e.preventDefault();
   const name = document.getElementById('registerName').value;
@@ -176,8 +146,38 @@ async function handleRegister(e) {
       showNotification(data.message || 'Registration failed', 'error');
     }
   } catch (error) {
-    console.error('[v0] Register error:', error);
+    console.error('Register error:', error);
     showNotification('Registration failed', 'error');
+  }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      loginPendingUserId = data.userId;
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
+      document.getElementById('twofa').classList.add('active');
+      document.getElementById('otpInput').focus();
+      showNotification('OTP sent to your email. Test OTP: ' + data.testOTP);
+    } else {
+      showNotification(data.message || 'Login failed', 'error');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    showNotification('Login failed', 'error');
   }
 }
 
@@ -210,7 +210,7 @@ async function handleOTPVerify(e) {
       showNotification(data.message || 'OTP verification failed', 'error');
     }
   } catch (error) {
-    console.error('[v0] OTP error:', error);
+    console.error('OTP error:', error);
     showNotification('OTP verification failed', 'error');
   }
 }
@@ -219,8 +219,8 @@ function showAuthModal() {
   authModal.classList.add('active');
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
-  document.querySelector('[data-tab="login"]').classList.add('active');
-  document.getElementById('login').classList.add('active');
+  document.querySelector('[data-tab="register"]').classList.add('active');
+  document.getElementById('register').classList.add('active');
 }
 
 function logout() {
@@ -240,12 +240,12 @@ async function loadHome() {
   currentPage = 'home';
   mainContent.innerHTML = `
     <div class="hero">
-      <h1>Welcome to Cyber</h1>
-      <p>Explore Premium Apple Products</p>
-      <button class="btn btn-primary" onclick="document.querySelector('.products-grid')?.scrollIntoView({ behavior: 'smooth' })">Shop Apple Now</button>
+      <h1>Welcome to Appple Shopping</h1>
+      <p>Discover Premium Apple Products</p>
+      <button class="btn btn-primary" onclick="document.querySelector('.products-grid')?.scrollIntoView({ behavior: 'smooth' })">Shop Now</button>
     </div>
     <div class="products-header">
-      <h2>Featured Apple Products</h2>
+      <h2>Featured Products</h2>
     </div>
     <div class="products-grid" id="productsGrid"></div>
   `;
@@ -258,7 +258,6 @@ async function loadProducts() {
     const response = await apiCall(url);
     if (!response.ok) throw new Error('Failed to fetch products');
     const products = await response.json();
-    console.log('Fetched products:', products); // Debug uchun log qoldirildi
 
     const grid = document.getElementById('productsGrid');
     if (!grid) throw new Error('Products grid not found');
@@ -276,7 +275,7 @@ async function loadProducts() {
             <div class="product-stock">Stock: ${product.stock}</div>
             <div class="product-actions">
               <button class="btn btn-primary" style="flex: 1" onclick="openProductDetail(${product.id})">View</button>
-              <button class="btn btn-secondary" onclick="addToCart(${product.id})">Add to Cart</button>
+              <button class="btn btn-secondary" onclick="addToCart(${product.id})">Cart</button>
             </div>
           </div>
         </div>
@@ -285,15 +284,14 @@ async function loadProducts() {
       .join('');
 
     if (products.length === 0) {
-      grid.innerHTML = '<p class="no-products">No Apple products found.</p>';
+      grid.innerHTML = '<p style="text-align: center; color: #999; padding: 40px; grid-column: 1 / -1;">No products found.</p>';
     }
   } catch (error) {
-    console.error('[v0] Load products error:', error);
+    console.error('Load products error:', error);
     showNotification(`Failed to load products: ${error.message}`, 'error');
   }
 }
 
-// Product Detail funksiyasi (View Product)
 async function openProductDetail(productId) {
   try {
     const response = await apiCall(`${API_BASE_URL}/products/${productId}`);
@@ -309,7 +307,7 @@ async function openProductDetail(productId) {
         <div class="product-detail-info">
           <h2>${product.name}</h2>
           <div class="product-detail-price">$${product.price.toFixed(2)}</div>
-          <p class="product-detail-description">${product.description || 'No description available'}</p>
+          <p class="product-detail-description">${product.description || 'Premium Apple product'}</p>
           <div class="product-specs">
             <h4>Specifications</h4>
             <div class="spec-item"><span>Category</span><span>${product.category || 'N/A'}</span></div>
@@ -318,7 +316,7 @@ async function openProductDetail(productId) {
           <div class="product-detail-actions">
             <div class="product-detail-quantity">
               <button type="button" onclick="decreaseQuantity(${product.id}, ${product.stock})">−</button>
-              <input type="number" id="detailQuantity_${product.id}" value="1" min="1" max="${product.stock}" />
+              <input type="number" id="detailQuantity_${product.id}" value="1" min="1" max="${product.stock}" readonly />
               <button type="button" onclick="increaseQuantity(${product.id}, ${product.stock})">+</button>
             </div>
             <button class="btn btn-primary" onclick="addToCartFromDetail(${product.id})">Add to Cart</button>
@@ -329,12 +327,11 @@ async function openProductDetail(productId) {
 
     productModal.classList.add('active');
   } catch (error) {
-    console.error('[v0] Product detail error:', error);
+    console.error('Product detail error:', error);
     showNotification(`Failed to load product details: ${error.message}`, 'error');
   }
 }
 
-// Quantity boshqarish
 function increaseQuantity(productId, maxStock) {
   const input = document.getElementById(`detailQuantity_${productId}`);
   let qty = parseInt(input.value, 10) || 1;
@@ -349,7 +346,6 @@ function decreaseQuantity(productId, maxStock) {
   input.value = qty;
 }
 
-// Add to Cart tugmasi
 async function addToCartFromDetail(productId) {
   if (!authToken) {
     showAuthModal();
@@ -373,22 +369,12 @@ async function addToCartFromDetail(productId) {
       showNotification('Failed to add to cart', 'error');
     }
   } catch (error) {
-    console.error('[v0] Add to cart error:', error);
+    console.error('Add to cart error:', error);
     showNotification(`Failed to add to cart: ${error.message}`, 'error');
   }
 }
 
-
-function updateQuantityDisplay(productId) {
-  const quantityInput = document.getElementById(`detailQuantity_${productId}`);
-  if (quantityInput.value > quantityInput.max) quantityInput.value = quantityInput.max;
-}
-
 async function addToCart(productId) {
-  await addToCartFromDetail(productId, 1);
-}
-
-async function addToCartFromDetail(productId, quantity) {
   if (!authToken) {
     showAuthModal();
     return;
@@ -397,18 +383,17 @@ async function addToCartFromDetail(productId, quantity) {
   try {
     const response = await apiCall(`${API_BASE_URL}/cart`, {
       method: 'POST',
-      body: JSON.stringify({ productId, quantity }),
+      body: JSON.stringify({ productId, quantity: 1 }),
     });
 
     if (response.ok) {
       await loadCart();
       showNotification('Added to cart!');
-      productModal.classList.remove('active');
     } else {
       showNotification('Failed to add to cart', 'error');
     }
   } catch (error) {
-    console.error('[v0] Add to cart error:', error);
+    console.error('Add to cart error:', error);
     showNotification(`Failed to add to cart: ${error.message}`, 'error');
   }
 }
@@ -423,7 +408,7 @@ async function loadCart() {
     updateCartCount();
     await renderCart();
   } catch (error) {
-    console.error('[v0] Load cart error:', error);
+    console.error('Load cart error:', error);
     showNotification(`Failed to load cart: ${error.message}`, 'error');
   }
 }
@@ -493,28 +478,24 @@ async function renderCart() {
 }
 
 async function updateCartQuantity(productId, change) {
-  // Joriy qiymatni olish
   const quantityInput = document.getElementById(`cartQuantity_${productId}`);
   if (!quantityInput) return;
-  
+
   let newQuantity = parseInt(quantityInput.value) + change;
-  
-  // Agar miqdor 0 bo'lsa, to'g'ridan-to'g'ri o'chirish
+
   if (newQuantity <= 0) {
     await removeFromCart(productId);
     return;
   }
 
-  // Min chegarani tekshirish
   if (newQuantity < 1) newQuantity = 1;
-  
-  // Stock tekshirish
+
   try {
     const productResponse = await apiCall(`${API_BASE_URL}/products/${productId}`);
     if (productResponse.ok) {
       const product = await productResponse.json();
       if (newQuantity > product.stock) {
-        showNotification(`Only ${product.stock} items available in stock`, 'error');
+        showNotification(`Only ${product.stock} items available`, 'error');
         newQuantity = product.stock;
       }
     }
@@ -529,10 +510,7 @@ async function updateCartQuantity(productId, change) {
     });
 
     if (response.ok) {
-      // Faqat input qiymatini yangilash
       quantityInput.value = newQuantity;
-      
-      // Cart count va narxlarni yangilash
       await updateCartPrices();
     } else {
       showNotification('Failed to update quantity', 'error');
@@ -550,11 +528,9 @@ async function removeFromCart(productId) {
     });
 
     if (response.ok) {
-      // Cartni to'liq qayta yuklash
       await loadCart();
       showNotification('Removed from cart');
-      
-      // Agar cart bo'sh bo'lsa, modalni yopish
+
       if (cart.length === 0) {
         setTimeout(() => {
           cartModal.classList.remove('active');
@@ -568,6 +544,33 @@ async function removeFromCart(productId) {
     showNotification(`Failed to remove from cart: ${error.message}`, 'error');
   }
 }
+
+async function updateCartPrices() {
+  const cartItemsEl = document.getElementById('cartItems');
+  let subtotal = 0;
+
+  for (const item of cart) {
+    try {
+      const productResponse = await apiCall(`${API_BASE_URL}/products/${item.productId}`);
+      if (productResponse.ok) {
+        const product = await productResponse.json();
+        const quantityInput = document.getElementById(`cartQuantity_${product.id}`);
+        const qty = parseInt(quantityInput.value);
+        subtotal += product.price * qty;
+      }
+    } catch (error) {
+      console.error('Error calculating prices:', error);
+    }
+  }
+
+  const tax = subtotal * 0.08;
+  const total = subtotal + tax;
+
+  document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById('tax').textContent = `$${tax.toFixed(2)}`;
+  document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+}
+
 function openCartModal() {
   if (!authToken) {
     showAuthModal();
@@ -604,7 +607,7 @@ function openProfileModal() {
         ? `
       <div style="margin-top: 24px;">
         <h3 style="margin-bottom: 16px;">Admin Functions</h3>
-        <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="openAddProductModal()">Add Product</button>
+        <button class="btn btn-primary btn-block" onclick="openAddProductModal()">Add Product</button>
       </div>
     `
         : ''
@@ -660,7 +663,7 @@ async function handleCheckout(e) {
       showNotification('Failed to place order', 'error');
     }
   } catch (error) {
-    console.error('[v0] Checkout error:', error);
+    console.error('Checkout error:', error);
     showNotification(`Checkout failed: ${error.message}`, 'error');
   }
 }
@@ -684,7 +687,7 @@ async function openAddProductModal() {
         description: `${name} - Premium Apple product`,
         category,
         stock: parseInt(stock),
-        image: '/images/placeholder.jpg', // Dummy image manzili qo'shildi
+        image: '/images/placeholder.jpg',
       }),
     });
 
@@ -695,7 +698,7 @@ async function openAddProductModal() {
       showNotification('Failed to add product', 'error');
     }
   } catch (error) {
-    console.error('[v0] Add product error:', error);
+    console.error('Add product error:', error);
     showNotification(`Failed to add product: ${error.message}`, 'error');
   }
 }
