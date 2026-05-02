@@ -17,7 +17,6 @@ export declare class AuthController {
     }): Promise<{
         userId: number;
         email: string;
-        otp: string;
         message: string;
     }>;
     verifyOtp(body: {

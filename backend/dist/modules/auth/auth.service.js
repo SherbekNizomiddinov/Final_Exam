@@ -46,6 +46,7 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcryptjs"));
+const nodemailer = __importStar(require("nodemailer"));
 let AuthService = class AuthService {
     constructor(jwtService) {
         this.jwtService = jwtService;
@@ -58,6 +59,29 @@ let AuthService = class AuthService {
                 role: 'admin',
             },
         ];
+        this.otpStore = new Map();
+    }
+    async sendOtpEmail(email, otp) {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+        await transporter.sendMail({
+            from: `"Apple Store" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Your login OTP code',
+            html: `
+        <div style="font-family:Arial;padding:20px">
+          <h2>Login verification</h2>
+          <p>Your OTP code:</p>
+          <h1 style="letter-spacing:4px">${otp}</h1>
+          <p>This code expires in 5 minutes.</p>
+        </div>
+      `,
+        });
     }
     async register(email, password, name) {
         if (this.users.find((u) => u.email === email)) {
@@ -79,25 +103,48 @@ let AuthService = class AuthService {
             throw new Error('Invalid credentials');
         }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        console.log(`[OTP] ${email}: ${otp}`);
+        this.otpStore.set(user.id, {
+            otp,
+            expiresAt: Date.now() + 5 * 60 * 1000,
+        });
+        await this.sendOtpEmail(user.email, otp);
         return {
             userId: user.id,
             email: user.email,
-            otp,
             message: 'OTP sent to email',
         };
     }
     async verifyOtp(userId, otp) {
-        const user = this.users.find((u) => u.id === userId);
+        const user = this.users.find((u) => u.id === Number(userId));
         if (!user) {
             throw new Error('User not found');
         }
+        const savedOtp = this.otpStore.get(user.id);
+        if (!savedOtp) {
+            throw new Error('OTP not found. Please login again');
+        }
+        if (savedOtp.expiresAt < Date.now()) {
+            this.otpStore.delete(user.id);
+            throw new Error('OTP expired');
+        }
+        if (savedOtp.otp !== otp) {
+            throw new Error('Invalid OTP');
+        }
+        this.otpStore.delete(user.id);
         const accessToken = this.jwtService.sign({ userId: user.id, email: user.email, role: user.role }, { expiresIn: '15m' });
-        const refreshToken = this.jwtService.sign({ userId: user.id }, { expiresIn: '7d', secret: process.env.REFRESH_SECRET || 'refresh-secret-key' });
+        const refreshToken = this.jwtService.sign({ userId: user.id }, {
+            expiresIn: '7d',
+            secret: process.env.REFRESH_SECRET || 'refresh-secret-key',
+        });
         return {
             accessToken,
             refreshToken,
-            user: { id: user.id, email: user.email, name: user.name, role: user.role },
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+            },
         };
     }
     async refreshToken(refreshToken) {
@@ -112,7 +159,7 @@ let AuthService = class AuthService {
             const newAccessToken = this.jwtService.sign({ userId: user.id, email: user.email, role: user.role }, { expiresIn: '15m' });
             return { accessToken: newAccessToken };
         }
-        catch (error) {
+        catch (_a) {
             throw new Error('Invalid refresh token');
         }
     }

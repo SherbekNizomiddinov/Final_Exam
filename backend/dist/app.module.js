@@ -8,8 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
-const jwt_1 = require("@nestjs/jwt");
-const passport_1 = require("@nestjs/passport");
+const config_1 = require("@nestjs/config");
 const auth_module_1 = require("./modules/auth/auth.module");
 const products_module_1 = require("./modules/products/products.module");
 const cart_module_1 = require("./modules/cart/cart.module");
@@ -23,11 +22,9 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'your-secret-key',
-                signOptions: { expiresIn: '15m' },
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
             }),
-            passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
             auth_module_1.AuthModule,
             products_module_1.ProductsModule,
             cart_module_1.CartModule,

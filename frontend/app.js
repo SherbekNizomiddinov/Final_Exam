@@ -1,4 +1,37 @@
 const API_BASE_URL = 'http://localhost:5000/api';
+let currentTheme = localStorage.getItem('theme') || 'light';
+
+document.documentElement.setAttribute('data-theme', currentTheme);
+
+function updateThemeButton() {
+  const themeToggle = document.getElementById('themeToggle');
+  if (!themeToggle) return;
+
+  const icon = themeToggle.querySelector('.theme-icon');
+  const text = themeToggle.querySelector('.theme-text');
+
+  if (currentTheme === 'dark') {
+    icon.textContent = '☀️';
+    text.textContent = 'Yorug';
+  } else {
+    icon.textContent = '🌙';
+    text.textContent = 'Qorongu';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateThemeButton();
+
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      localStorage.setItem('theme', currentTheme);
+      updateThemeButton();
+    });
+  }
+});
 let authToken = localStorage.getItem('accessToken');
 let refreshToken = localStorage.getItem('refreshToken');
 let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
@@ -136,18 +169,18 @@ async function handleRegister(e) {
     const data = await response.json();
 
     if (response.ok) {
-      showNotification('Registration successful! Please login.');
+      showNotification(`Ro'yhatdan o'tish muvafaqqiyatli tasdiqlandi. Iltimos Login sahifasini kuting`);
       document.getElementById('registerForm').reset();
       document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
       document.querySelector('[data-tab="login"]').classList.add('active');
       document.getElementById('login').classList.add('active');
       document.getElementById('register').classList.remove('active');
     } else {
-      showNotification(data.message || 'Registration failed', 'error');
+      showNotification(data.message || `Ro'yhatdan o'tishda hato !`, 'error');
     }
   } catch (error) {
-    console.error('Register error:', error);
-    showNotification('Registration failed', 'error');
+    console.error(`Ro'yhatdan o'tishda hato:`, error);
+    showNotification(`Ro'yhatdan o'tishda hato`, 'error');
   }
 }
 
@@ -171,13 +204,13 @@ async function handleLogin(e) {
       document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
       document.getElementById('twofa').classList.add('active');
       document.getElementById('otpInput').focus();
-      showNotification('OTP sent to your email. Test OTP: ' + data.testOTP);
+      showNotification('Emailingizga 6 xonali OTP kod yuborildi iltimos uni kiriting.');
     } else {
-      showNotification(data.message || 'Login failed', 'error');
+      showNotification(data.message || 'Kirishda hatolik !', 'error');
     }
   } catch (error) {
-    console.error('Login error:', error);
-    showNotification('Login failed', 'error');
+    console.error('Kirishda hato:', error);
+    showNotification('Kirishda hato', 'error');
   }
 }
 
@@ -204,14 +237,14 @@ async function handleOTPVerify(e) {
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
       authModal.classList.remove('active');
-      showNotification('Login successful!');
+      showNotification('Muvafaqiyatli kirildi!');
       loadHome();
     } else {
-      showNotification(data.message || 'OTP verification failed', 'error');
+      showNotification(data.message || 'OTP kod yuborishda hatolik', 'error');
     }
   } catch (error) {
-    console.error('OTP error:', error);
-    showNotification('OTP verification failed', 'error');
+    console.error('OTPda hatolik !:', error);
+    showNotification('OTP kod yuborishda hatolik', 'error');
   }
 }
 
@@ -232,7 +265,7 @@ function logout() {
   localStorage.removeItem('currentUser');
   cart = [];
   showAuthModal();
-  showNotification('Logged out successfully');
+  showNotification('Tizimdan muvafaqqiyatli chiqildi !');
 }
 
 // Product Functions
@@ -240,9 +273,9 @@ async function loadHome() {
   currentPage = 'home';
   mainContent.innerHTML = `
     <div class="hero">
-      <h1>Welcome to Appple Shopping</h1>
-      <p>Discover Premium Apple Products</p>
-      <button class="btn btn-primary" onclick="document.querySelector('.products-grid')?.scrollIntoView({ behavior: 'smooth' })">Shop Now</button>
+      <h1>Xush kelibsiz Apple Magazinga </h1>
+      <p>Premium Apple mahsulotlari bilan tanishing</p>
+      <button class="btn btn-primary" onclick="document.querySelector('.products-grid')?.scrollIntoView({ behavior: 'smooth' })">Harid qilish</button>
     </div>
     <div class="products-header">
       <h2>Featured Products</h2>
@@ -260,7 +293,7 @@ async function loadProducts() {
     const products = await response.json();
 
     const grid = document.getElementById('productsGrid');
-    if (!grid) throw new Error('Products grid not found');
+    if (!grid) throw new Error('Mahsulotlar toʻplami topilmadi !');
 
     grid.innerHTML = products
       .map(
@@ -274,8 +307,8 @@ async function loadProducts() {
             <div class="product-price">$${product.price.toFixed(2)}</div>
             <div class="product-stock">Stock: ${product.stock}</div>
             <div class="product-actions">
-              <button class="btn btn-primary" style="flex: 1" onclick="openProductDetail(${product.id})">View</button>
-              <button class="btn btn-secondary" onclick="addToCart(${product.id})">Cart</button>
+              <button class="btn btn-primary" style="flex: 1" onclick="openProductDetail(${product.id})">Ko'rish</button>
+              <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); addToCart(${product.id})">Qo'shish</button>
             </div>
           </div>
         </div>
@@ -284,42 +317,79 @@ async function loadProducts() {
       .join('');
 
     if (products.length === 0) {
-      grid.innerHTML = '<p style="text-align: center; color: #999; padding: 40px; grid-column: 1 / -1;">No products found.</p>';
+      grid.innerHTML = '<p style="text-align: center; color: #999; padding: 40px; grid-column: 1 / -1;">Mahsulot Topilmadi.</p>';
     }
   } catch (error) {
-    console.error('Load products error:', error);
-    showNotification(`Failed to load products: ${error.message}`, 'error');
+    console.error('Mahsulotlarni yuklash xatosi !:', error);
+    showNotification(`Mahsulotlar yuklanmadi !: ${error.message}`, 'error');
   }
+} 
+
+function formatProductDescription(description) {
+  const labels = [
+    'Display',
+    'Chip',
+    'Cameras',
+    'Front Camera',
+    'Battery',
+    'Battery Life',
+    'Storage',
+    'Storage Options',
+  ];
+
+  const regex = new RegExp(`(${labels.join('|')}):`, 'gi');
+  const matches = [...description.matchAll(regex)];
+
+  if (matches.length === 0) {
+    return `<div class="desc-line"><span class="desc-value">${description}</span></div>`;
+  }
+
+  return matches.map((match, index) => {
+    const label = match[1];
+    const start = match.index + match[0].length;
+    const end = matches[index + 1] ? matches[index + 1].index : description.length;
+    const value = description.slice(start, end).trim();
+
+    return `
+      <div class="desc-line">
+        <span class="desc-label">${label}:</span>
+        <span class="desc-value">${value}</span>
+      </div>
+    `;
+  }).join('');
 }
 
 async function openProductDetail(productId) {
   try {
     const response = await apiCall(`${API_BASE_URL}/products/${productId}`);
-    if (!response.ok) throw new Error('Failed to fetch product details');
+
+    if (!response.ok) throw new Error('Mahsulot tafsilotlarini olib bo‘lmadi');
+
     const product = await response.json();
 
     document.getElementById('productDetail').innerHTML = `
       <div class="product-detail">
         <div class="product-detail-image">
-          <img src="http://localhost:5000${product.image || '/images/placeholder.png'}" alt="${product.name}" 
-               onerror="this.onerror=null; this.src='http://localhost:5000/images/placeholder.png'" />
+          <img src="http://localhost:5000${product.image || '/images/placeholder.png'}" />
         </div>
+
         <div class="product-detail-info">
           <h2>${product.name}</h2>
-          <div class="product-detail-price">$${product.price.toFixed(2)}</div>
-          <p class="product-detail-description">${product.description || 'Premium Apple product'}</p>
-          <div class="product-specs">
-            <h4>Specifications</h4>
-            <div class="spec-item"><span>Category</span><span>${product.category || 'N/A'}</span></div>
-            <div class="spec-item"><span>Stock</span><span>${product.stock} units</span></div>
+
+          <div class="product-detail-description">
+            ${formatProductDescription(product.description || '')}
           </div>
+
           <div class="product-detail-actions">
             <div class="product-detail-quantity">
-              <button type="button" onclick="decreaseQuantity(${product.id}, ${product.stock})">−</button>
-              <input type="number" id="detailQuantity_${product.id}" value="1" min="1" max="${product.stock}" readonly />
-              <button type="button" onclick="increaseQuantity(${product.id}, ${product.stock})">+</button>
+              <button onclick="decreaseQuantity(${product.id}, ${product.stock})">−</button>
+              <input id="detailQuantity_${product.id}" value="1" readonly />
+              <button onclick="increaseQuantity(${product.id}, ${product.stock})">+</button>
             </div>
-            <button class="btn btn-primary" onclick="addToCartFromDetail(${product.id})">Add to Cart</button>
+
+            <button class="btn btn-primary" onclick="addToCartFromDetail(${product.id})">
+              Savatchaga qo‘shish
+            </button>
           </div>
         </div>
       </div>
@@ -327,8 +397,7 @@ async function openProductDetail(productId) {
 
     productModal.classList.add('active');
   } catch (error) {
-    console.error('Product detail error:', error);
-    showNotification(`Failed to load product details: ${error.message}`, 'error');
+    showNotification(error.message, 'error');
   }
 }
 
@@ -349,52 +418,74 @@ function decreaseQuantity(productId, maxStock) {
 async function addToCartFromDetail(productId) {
   if (!authToken) {
     showAuthModal();
+    showNotification('Avval login qiling', 'error');
     return;
   }
 
   const quantityInput = document.getElementById(`detailQuantity_${productId}`);
-  const qty = Math.min(parseInt(quantityInput.value, 10) || 1, parseInt(quantityInput.max, 10));
+  const qty = quantityInput ? Number(quantityInput.value) || 1 : 1;
 
   try {
     const response = await apiCall(`${API_BASE_URL}/cart`, {
       method: 'POST',
-      body: JSON.stringify({ productId, quantity: qty }),
+      body: JSON.stringify({
+        productId: Number(productId),
+        quantity: qty,
+      }),
     });
+
+    const data =
+    response && typeof response.json === 'function'
+      ? await response.json().catch(() => ({}))
+      : {};
 
     if (response.ok) {
       await loadCart();
-      showNotification('Added to cart!');
+      updateCartCount();
+      showNotification('Mahsulot savatchaga qo‘shildi!');
       productModal.classList.remove('active');
     } else {
-      showNotification('Failed to add to cart', 'error');
+      showNotification(data.message || `Cart error: ${response.status}`, 'error');
+      console.log('Cart error:', data);
     }
   } catch (error) {
     console.error('Add to cart error:', error);
-    showNotification(`Failed to add to cart: ${error.message}`, 'error');
+    showNotification(error.message || 'Savatchaga qo‘shishda xatolik', 'error');
   }
 }
 
 async function addToCart(productId) {
   if (!authToken) {
     showAuthModal();
+    showNotification('Avval login qiling', 'error');
     return;
   }
 
   try {
     const response = await apiCall(`${API_BASE_URL}/cart`, {
       method: 'POST',
-      body: JSON.stringify({ productId, quantity: 1 }),
+      body: JSON.stringify({
+        productId: Number(productId),
+        quantity: 1,
+      }),
     });
+
+    const data =
+      response && typeof response.json === 'function'
+        ? await response.json().catch(() => ({}))
+        : {};
 
     if (response.ok) {
       await loadCart();
-      showNotification('Added to cart!');
+      updateCartCount();
+      showNotification('Mahsulot savatchaga qo‘shildi!');
     } else {
-      showNotification('Failed to add to cart', 'error');
+      showNotification(data.message || `Cart error: ${response.status}`, 'error');
+      console.log('Cart error:', data);
     }
   } catch (error) {
     console.error('Add to cart error:', error);
-    showNotification(`Failed to add to cart: ${error.message}`, 'error');
+    showNotification(error.message || 'Savatchaga qo‘shishda xatolik', 'error');
   }
 }
 
@@ -434,7 +525,7 @@ async function renderCart() {
   for (const item of cart) {
     try {
       const productResponse = await apiCall(`${API_BASE_URL}/products/${item.productId}`);
-      if (!productResponse.ok) throw new Error('Product not found');
+      if (!productResponse.ok) throw new Error('Mahsulot Topilmadi');
       const product = await productResponse.json();
       const itemTotal = product.price * item.quantity;
       subtotal += itemTotal;
@@ -529,7 +620,7 @@ async function removeFromCart(productId) {
 
     if (response.ok) {
       await loadCart();
-      showNotification('Removed from cart');
+      showNotification(`Mahsulot o'chirildi`);
 
       if (cart.length === 0) {
         setTimeout(() => {
@@ -540,7 +631,7 @@ async function removeFromCart(productId) {
       showNotification('Failed to remove from cart', 'error');
     }
   } catch (error) {
-    console.error('Remove from cart error:', error);
+    console.error(`Mahsulotni o'chirishda hatolik`, error);
     showNotification(`Failed to remove from cart: ${error.message}`, 'error');
   }
 }
@@ -559,7 +650,7 @@ async function updateCartPrices() {
         subtotal += product.price * qty;
       }
     } catch (error) {
-      console.error('Error calculating prices:', error);
+      console.error('Mahsulotni Hisoblashda Hatolik:', error);
     }
   }
 
@@ -607,7 +698,7 @@ function openProfileModal() {
         ? `
       <div style="margin-top: 24px;">
         <h3 style="margin-bottom: 16px;">Admin Functions</h3>
-        <button class="btn btn-primary btn-block" onclick="openAddProductModal()">Add Product</button>
+        <button class="btn btn-primary btn-block" onclick="openAddProductModal()">Mahsulot Qo'shish</button>
       </div>
     `
         : ''
@@ -669,38 +760,97 @@ async function handleCheckout(e) {
 }
 
 async function openAddProductModal() {
-  const name = prompt('Product name:');
-  if (!name) return;
-  const price = prompt('Price:');
-  if (!price) return;
-  const category = prompt('Category:');
-  if (!category) return;
-  const stock = prompt('Stock quantity:');
-  if (!stock) return;
+  const modal = document.createElement('div');
+  modal.className = 'modal active';
 
-  try {
-    const response = await apiCall(`${API_BASE_URL}/products`, {
-      method: 'POST',
-      body: JSON.stringify({
-        name,
-        price: parseFloat(price),
-        description: `${name} - Premium Apple product`,
-        category,
-        stock: parseInt(stock),
-        image: '/images/placeholder.jpg',
-      }),
-    });
+  modal.innerHTML = `
+    <div class="modal-content add-product-modal">
+      <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
 
-    if (response.ok) {
-      showNotification('Product added successfully!');
-      await loadHome();
-    } else {
-      showNotification('Failed to add product', 'error');
+      <div class="add-product-head">
+        <h2>Add New Product</h2>
+        <p>Premium Apple mahsulotini chiroyli forma orqali qo‘shing</p>
+      </div>
+
+      <form id="addProductForm" class="add-product-form">
+        <div class="form-group">
+          <label>Product Name</label>
+          <input type="text" id="newProductName" placeholder="Apple iPhone 17 Pro Max" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Price</label>
+            <input type="number" id="newProductPrice" placeholder="1999" required />
+          </div>
+
+          <div class="form-group">
+            <label>Stock</label>
+            <input type="number" id="newProductStock" placeholder="30" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <select id="newProductCategory" required>
+            <option value="Telefonlar">Phones</option>
+            <option value="Noutbuklar">Laptops</option>
+            <option value="Planshetlar">Tablets</option>
+            <option value="Aksessuarlar">Accessories</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Image Path</label>
+          <input type="text" id="newProductImage" placeholder="/images/iphone17.jpg" />
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="newProductDescription" placeholder="Display: 6.9 Super Retina XDR
+          Chip: A19 Pro
+          Storage Options: 256 GB, 512 GB, 1 TB
+          Cameras: Triple 48 MP
+          Battery Life: Video playback up to 39 hours" required></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-block" type="submit">Mahsulot Yaratish</button>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const productData = {
+      name: document.getElementById('newProductName').value.trim(),
+      price: Number(document.getElementById('newProductPrice').value),
+      category: document.getElementById('newProductCategory').value,
+      stock: Number(document.getElementById('newProductStock').value),
+      image: document.getElementById('newProductImage').value.trim() || '/images/placeholder.png',
+      description: document.getElementById('newProductDescription').value.trim(),
+    };
+
+    try {
+      const response = await apiCall(`${API_BASE_URL}/products`, {
+        method: 'POST',
+        body: JSON.stringify(productData),
+      });
+
+      if (response.ok) {
+        showNotification(`Mahsulot muvaffaqiyatli Qo'shildi !`);
+        modal.remove();
+        await loadHome();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        showNotification(errorData.message || 'Failed to add product', 'error');
+      }
+    } catch (error) {
+      showNotification(`Failed to add product: ${error.message}`, 'error');
     }
-  } catch (error) {
-    console.error('Add product error:', error);
-    showNotification(`Failed to add product: ${error.message}`, 'error');
-  }
+  });
 }
 
 // Close modals on background click

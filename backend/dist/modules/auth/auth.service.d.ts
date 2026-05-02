@@ -2,7 +2,9 @@ import { JwtService } from '@nestjs/jwt';
 export declare class AuthService {
     private jwtService;
     private users;
+    private otpStore;
     constructor(jwtService: JwtService);
+    private sendOtpEmail;
     register(email: string, password: string, name: string): Promise<{
         id: number;
         email: string;
@@ -11,7 +13,6 @@ export declare class AuthService {
     login(email: string, password: string): Promise<{
         userId: number;
         email: string;
-        otp: string;
         message: string;
     }>;
     verifyOtp(userId: number, otp: string): Promise<{
